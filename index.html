@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="//unpkg.com/brain.js"></script>
+    <style>
+.can{
+border: 1px solid black;
+}
+
+    </style>
+</head>
+<body>
+    <h1>AI test with brain.js</h1>
+    <button id="treinar">Treinar</button><br>
+    <button id="testar">Testar</button><br>
+    <button id="testarRandom">Testar random</button><br>
+    <button id="randomBall">Random ball</button><br>
+    <canvas id="myCanvas" class="can"></canvas>
+<script src="canvas.js"></script>
+    <script>
+
+        const btTreinar=document.getElementById('treinar')
+        let stringBrain=""
+
+        // Set canvas size fo the biggest canvas
+        const maxd=100
+        canvas.width =maxd;
+        canvas.height = maxd;
+       
+        //Function to create a random ball for the training
+        // the radius mus be graeter than 10, because in this examples
+        //we are reducing the image from 100x100 to 10x10
+        const balls=[]
+        for(let rx=10;rx<40;rx+=10){
+            for(let i=rx;i<100-rx;i+=10){
+                for(let j=rx;j<100-rx;j+=10){
+                    balls.push([i,j,rx])
+                }
+                
+            }
+        }
+
+        //Function to create a random ball for the training
+        document.getElementById('randomBall').onclick=function(){           
+            createRandomBall()
+        }
+
+
+
+        
+
+
+
+//train the neural network
+        btTreinar.addEventListener('click',()=>{
+        
+            let a=[]
+
+            balls.forEach((b,i)=>{
+                    ctx.bgColor('white')
+                    const x=balls[i][0]
+                    const y=balls[i][1]
+                    const r=balls[i][2]
+                    ctx.createBall(x, y, r, 'black');
+                    ctx.xcorner=x-r
+                    ctx.ycorner=y-r
+                    ctx.width=2*r
+
+                    let data={}
+                    data.input=ctx.getData2(10)
+                    const xcorder=Math.round(ctx.xcorner)
+                    const ycorder=Math.round(ctx.ycorner)
+                    const width=Math.round(ctx.width)
+                    const ot=`{"x${xcorder}":1,"y${ycorder}":1,"w${width}":1}`
+                    data.output=JSON.parse(ot)
+                    a.push(data)
+            })
+
+
+        
+
+
+            const net = new brain.NeuralNetwork({
+                hiddenLayers: [32,32],
+                activation: 'sigmoid'
+            });
+
+        // Train the neural network
+            net.train(a,{
+                iterations: 10000,
+                log: true,
+                logPeriod: 100,
+                errorThresh: 0.0005
+            
+            });
+
+            stringBrain=JSON.stringify(net.toJSON())
+
+
+        })
+
+
+        
+
+
+
+
+        document.getElementById('testar').onclick=function(){
+
+
+            ctx.bgColor('white')
+            const i=Math.round(Math.random()*balls.length-1)  
+            console.log(i)
+            console.log(balls[i])
+            const x=balls[i][0]
+            const y=balls[i][1]
+            const r=balls[i][2]
+            console.log(x,y,r)
+            ctx.createBall(x, y, r, 'black');
+            ctx.xcorner=x-r
+            ctx.ycorner=y-r
+            ctx.width=2*r
+
+            const net = new brain.NeuralNetwork({
+                hiddenLayers: [40,40,20],
+                activation: 'sigmoid'
+            });
+
+            net.fromJSON(JSON.parse(stringBrain))
+            
+            //ctx.addNoise(200)
+            const output = net.run(ctx.getData2(10));
+           // denormalize(output)
+            console.log(output)
+            const z=getpoints(output)
+            console.log(z)
+            ctx.createBox(z[0],z[1],z[2],z[2],'red')
+        }
+
+        document.getElementById('testarRandom').onclick=function(){
+
+
+                    ctx.createRandomBall()
+
+                    const net = new brain.NeuralNetwork({
+                    hiddenLayers: [40,40,20],
+                    activation: 'sigmoid'
+                    });
+
+                    net.fromJSON(JSON.parse(stringBrain))
+
+                    //ctx.addNoise(200)
+                    const output = net.run(ctx.getData2(10));
+                    // denormalize(output)
+                    console.log(output)
+                    const z=getpoints(output)
+                    console.log(z)
+                    ctx.createBox(z[0],z[1],z[2],z[2],'red')
+                    }
+
+
+
+
+       
+
+        function reduceImageData(ctx, canvas, scale) {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const lines = canvas.height / scale;
+        const columns = canvas.width / scale;
+        const newImageData = ctx.createImageData(columns, lines);
+        const newData = newImageData.data;
+
+        for (let i = 0; i < lines; i++) {
+            for (let j = 0; j < columns; j++) {
+                let pixel = [0, 0, 0, 0];
+
+                for (let s = 0; s < scale; s++) {
+                    for (let t = 0; t < scale; t++) {
+                        const index = (i * scale + s) * canvas.width * 4 + (j * scale + t) * 4;
+                        pixel[0] += imageData.data[index];
+                        pixel[1] += imageData.data[index + 1];
+                        pixel[2] += imageData.data[index + 2];
+                        pixel[3] += imageData.data[index + 3];
+                    }
+                }
+
+                const newIndex = (i * columns + j) * 4;
+                newData[newIndex] = pixel[0] / (scale * scale);
+                newData[newIndex + 1] = pixel[1] / (scale * scale);
+                newData[newIndex + 2] = pixel[2] / (scale * scale);
+                newData[newIndex + 3] = pixel[3] / (scale * scale);
+            }
+        }
+
+        return newImageData;
+    }
+    
+
+    </script>
+
+    
+</body>
+</html>
