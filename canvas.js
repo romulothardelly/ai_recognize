@@ -126,4 +126,36 @@ function getpoints(result){
    
 }
 
+//reduce the image data
+function reduceImageData(ctx, canvas, scale) {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const lines = canvas.height / scale;
+    const columns = canvas.width / scale;
+    const newImageData = ctx.createImageData(columns, lines);
+    const newData = newImageData.data;
+
+    for (let i = 0; i < lines; i++) {
+        for (let j = 0; j < columns; j++) {
+            let pixel = [0, 0, 0, 0];
+
+            for (let s = 0; s < scale; s++) {
+                for (let t = 0; t < scale; t++) {
+                    const index = (i * scale + s) * canvas.width * 4 + (j * scale + t) * 4;
+                    pixel[0] += imageData.data[index];
+                    pixel[1] += imageData.data[index + 1];
+                    pixel[2] += imageData.data[index + 2];
+                    pixel[3] += imageData.data[index + 3];
+                }
+            }
+
+            const newIndex = (i * columns + j) * 4;
+            newData[newIndex] = pixel[0] / (scale * scale);
+            newData[newIndex + 1] = pixel[1] / (scale * scale);
+            newData[newIndex + 2] = pixel[2] / (scale * scale);
+            newData[newIndex + 3] = pixel[3] / (scale * scale);
+        }
+    }
+
+    return newImageData;
+}
 
